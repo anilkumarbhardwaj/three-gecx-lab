@@ -1,0 +1,87 @@
+# Terraform CI/CD — mirrors the 3IR model at lab scale.
+# PR  -> fmt / validate / plan (read-only)
+# main -> apply, stage by stage, in order
+#
+# Repo "Variables" (Settings > Secrets and variables > Actions > Variables):
+#   GCP_WIF_PROVIDER   = output `wif_provider` from 0-bootstrap
+#   SA_TF_FOUNDATION   = output `sa_tf_foundation`
+#   SA_TF_WORKLOADS    = output `sa_tf_workloads`
+#   TF_STATE_BUCKET    = output `state_bucket`
+#   GCP_ORG_ID         = your numeric org id
+#   GCP_BILLING_ID     = XXXXXX-XXXXXX-XXXXXX
+#   LAB_PREFIX         = same prefix used in bootstrap
+#   GECX_FOLDER_ID     = output `gecx_folder_id` (folders/123...)
+#   CICD_PROJECT_ID    = output `cicd_project_id`
+
+name: terraform
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ["1-foundation/**", "2-network/**", "3-security/**", "4-workload/**"]
+  push:
+    branches: [main]
+    paths: ["1-foundation/**", "2-network/**", "3-security/**", "4-workload/**"]
+
+permissions:
+  contents: read
+  id-token: write   # required for WIF OIDC token
+
+env:
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: 1-foundation } }
+    env:
+      TF_VAR_org_id: ${{ vars.GCP_ORG_ID }}
+      TF_VAR_billing_account_id: ${{ vars.GCP_BILLING_ID }}
+      TF_VAR_prefix: ${{ vars.LAB_PREFIX }}
+      TF_VAR_gecx_folder_id: ${{ vars.GECX_FOLDER_ID }}
+      TF_VAR_cicd_project_id: ${{ vars.CICD_PROJECT_ID }}
+      # In CI we ARE sa-tf-foundation via WIF — no impersonation needed:
+      TF_VAR_terraform_service_account: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.SA_TF_FOUNDATION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "1.9.x" }
+
+      - name: Init
+        run: terraform init -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+
+      - name: Fmt & Validate
+        run: |
+          terraform fmt -check -recursive
+          terraform validate
+
+      - name: Plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: terraform apply -input=false -auto-approve tfplan
+
+  # Uncomment as the stages come to life (next steps of the lab).
+  #
+  # network:
+  #   needs: foundation
+  #   runs-on: ubuntu-latest
+  #   defaults: { run: { working-directory: 2-network } }
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: google-github-actions/auth@v2
+  #       with:
+  #         workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+  #         service_account: ${{ vars.SA_TF_WORKLOADS }}
+  #     - uses: hashicorp/setup-terraform@v3
+  #     - run: terraform init -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+  #     - run: terraform plan -input=false -out=tfplan
+  #     - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  #       run: terraform apply -input=false -auto-approve tfplan
