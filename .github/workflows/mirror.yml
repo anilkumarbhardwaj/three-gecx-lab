@@ -1,0 +1,19 @@
+name: Mirror to GitLab
+
+on:
+  push:
+    branches: ['**']   # or just [main] if you only care about main
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history needed for a clean mirror push
+
+      - name: Push to GitLab
+        run: |
+          git remote add gitlab https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.com/bhardwaj.anil008/three-gecx-lab.git
+          git push gitlab --all --force
+          git push gitlab --tags --force
