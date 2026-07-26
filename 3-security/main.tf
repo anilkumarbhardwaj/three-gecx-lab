@@ -84,7 +84,7 @@ module "logging" {
   ]
 
   log_metrics = {
-    financial_tool_invocations = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${local.name_prefix}-crun-write-financial\" AND httpRequest.requestMethod=\"POST\""
+    financial_tool_invocations  = "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"${local.name_prefix}-crun-write-financial\" AND httpRequest.requestMethod=\"POST\""
     secret_access_unexpected_sa = "protoPayload.serviceName=\"secretmanager.googleapis.com\" AND protoPayload.methodName=\"google.cloud.secretmanager.v1.SecretManagerService.AccessSecretVersion\""
     nat_translation_errors      = "resource.type=\"nat_gateway\" AND jsonPayload.allocation_status=\"DROPPED\""
   }

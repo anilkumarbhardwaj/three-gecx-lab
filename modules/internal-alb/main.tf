@@ -101,10 +101,10 @@ resource "google_compute_region_url_map" "this" {
 }
 
 resource "google_compute_region_target_https_proxy" "this" {
-  project = var.project_id
-  region  = var.region
-  name    = "${var.name_prefix}-thp-${var.region_short}"
-  url_map = google_compute_region_url_map.this.id
+  project          = var.project_id
+  region           = var.region
+  name             = "${var.name_prefix}-thp-${var.region_short}"
+  url_map          = google_compute_region_url_map.this.id
   ssl_certificates = var.create_self_signed_cert ? [google_compute_region_ssl_certificate.this[0].id] : var.ssl_certificate_ids
 }
 

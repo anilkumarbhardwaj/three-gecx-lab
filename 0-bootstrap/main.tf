@@ -98,7 +98,7 @@ resource "google_billing_account_iam_member" "tf_foundation_billing" {
 # Workloads SA: scoped to the GECX folder only (never org-wide)
 resource "google_folder_iam_member" "tf_workloads" {
   for_each = toset([
-    "roles/editor",                            # lab shortcut; tighten per-service in real setup
+    "roles/editor", # lab shortcut; tighten per-service in real setup
     "roles/resourcemanager.projectIamAdmin",
     "roles/compute.xpnAdmin",
   ])

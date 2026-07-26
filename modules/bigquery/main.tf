@@ -3,13 +3,13 @@
 # wire it up only if the decision reopens.
 
 resource "google_bigquery_dataset" "this" {
-  for_each                   = var.datasets
-  project                    = var.project_id
-  dataset_id                 = each.key
-  location                   = var.location
+  for_each                    = var.datasets
+  project                     = var.project_id
+  dataset_id                  = each.key
+  location                    = var.location
   default_table_expiration_ms = each.value.table_expiration_days != null ? each.value.table_expiration_days * 86400000 : null
-  delete_contents_on_destroy = true # lab
-  labels                     = { managed-by = "terraform" }
+  delete_contents_on_destroy  = true # lab
+  labels                      = { managed-by = "terraform" }
 }
 
 locals {

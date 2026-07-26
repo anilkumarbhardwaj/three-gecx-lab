@@ -36,7 +36,7 @@ resource "google_project" "gecx" {
 resource "google_project_service" "gecx" {
   for_each = { for pair in setproduct(var.environments, [
     "compute.googleapis.com",
-    "iam.googleapis.com",  ## For WIF to work, this must be enabled in the workload project.
+    "iam.googleapis.com", ## For WIF to work, this must be enabled in the workload project.
     "dns.googleapis.com",
     "networkconnectivity.googleapis.com",
     "run.googleapis.com",

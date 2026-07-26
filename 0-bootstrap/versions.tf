@@ -11,7 +11,7 @@ terraform {
   # #   terraform init -migrate-state
   #
   backend "gcs" {
-    bucket = "three01-gecx-tfstate"   # value of output `state_bucket`
+    bucket = "three01-gecx-tfstate" # value of output `state_bucket`
     prefix = "bootstrap"
   }
 }
