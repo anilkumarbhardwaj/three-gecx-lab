@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------
 # GitLab CI/CD — mirrors the 3IR model at lab scale (workbook sheet 03):
 #   merge request -> fmt / validate / plan (read-only)
-#   main          -> apply, stage by stage, in dependency order
+#   develop          -> apply, stage by stage, in dependency order
 # Auth: GitLab OIDC id_token -> GCP Workload Identity Federation -> stage SA.
 # No service account keys, ever (org policy disableServiceAccountKeyCreation).
 #
@@ -26,7 +26,7 @@
 workflow:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
 
 stages:
   - validate
@@ -80,17 +80,17 @@ variables:
     expire_in: 1 hour
   rules:
     # On MRs, later-stage plans may fail until the upstream stage has been
-    # applied at least once on main (remote state doesn't exist yet).
+    # applied at least once on develop (remote state doesn't exist yet).
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       allow_failure: true
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
 
 .apply:
   extends: .gcp_auth
   script:
     - terraform apply -auto-approve tfplan
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
 
 # --- validate ----------------------------------------------------------------
 
@@ -100,7 +100,7 @@ fmt:
     - terraform fmt -check -recursive
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "develop"
 
 # --- 1-foundation (sa-tf-foundation) -----------------------------------------
 
