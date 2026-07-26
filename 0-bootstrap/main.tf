@@ -156,3 +156,43 @@ resource "google_service_account_iam_member" "wif" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${local.wif_repo}"
 }
+
+# --- Workload Identity Federation for GitLab CI/CD ---------------------------
+
+resource "google_iam_workload_identity_pool" "gitlab" {
+  project                   = google_project.cicd.project_id
+  workload_identity_pool_id = "gitlab-pool"
+  display_name              = "GitLab CI/CD"
+}
+
+resource "google_iam_workload_identity_pool_provider" "gitlab" {
+  project                            = google_project.cicd.project_id
+  workload_identity_pool_id          = google_iam_workload_identity_pool.gitlab.workload_identity_pool_id
+  workload_identity_pool_provider_id = "gitlab-oidc"
+  display_name                       = "GitLab OIDC"
+
+  attribute_mapping = {
+    "google.subject"         = "assertion.sub"
+    "attribute.project_path" = "assertion.project_path"
+    "attribute.ref"          = "assertion.ref"
+    "attribute.ref_type"     = "assertion.ref_type"
+  }
+
+  # Only THIS project can ever exchange tokens
+  attribute_condition = "assertion.project_path == \"${var.gitlab_project_path}\""
+
+  oidc {
+    issuer_uri = var.gitlab_url
+  }
+}
+
+# Let GitLab CI/CD jobs from the project impersonate the stage SAs
+resource "google_service_account_iam_member" "wif_gitlab" {
+  for_each = {
+    foundation = google_service_account.tf_foundation.name
+    workloads  = google_service_account.tf_workloads.name
+  }
+  service_account_id = each.value
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.gitlab.name}/attribute.project_path/${var.gitlab_project_path}"
+}

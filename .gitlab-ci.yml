@@ -6,16 +6,17 @@
 # No service account keys, ever (org policy disableServiceAccountKeyCreation).
 #
 # GitLab CI/CD Variables (Settings > CI/CD > Variables — none are secret,
-# but mark them "Protected" so only protected refs can use them):
-#   GCP_WIF_PROVIDER   = bootstrap output `wif_provider`
+# but mark them "Protected" so only protected refs can use them; if plan-on-MR
+# needs to work from unprotected branches, leave them unprotected instead):
+#   GCP_WIF_PROVIDER   = bootstrap output `wif_provider_gitlab`
 #                        (projects/NNN/locations/global/workloadIdentityPools/gitlab-pool/providers/gitlab-oidc)
 #   SA_TF_FOUNDATION   = bootstrap output `sa_tf_foundation`
-#   SA_DEPLOY_GECX_D   = bootstrap output `sa_deploy_gecx_d`
+#   SA_TF_WORKLOADS    = bootstrap output `sa_tf_workloads`
 #   TF_STATE_BUCKET    = bootstrap output `state_bucket`
 #   GCP_ORG_ID         = numeric org id
 #   GCP_BILLING_ID     = XXXXXX-XXXXXX-XXXXXX
-#   LAB_PREFIX         = demo-lab (same prefix used in bootstrap)
-#   CXAI_FOLDER_ID     = bootstrap output `cxai_folder_id` (folders/NNN)
+#   LAB_PREFIX         = same prefix used in bootstrap
+#   GECX_FOLDER_ID     = bootstrap output `gecx_folder_id` (folders/NNN)
 #   CICD_PROJECT_ID    = bootstrap output `cicd_project_id`
 #   ALERT_EMAIL        = (optional) ops email for alerts + budget
 #   ENABLE_NAT         = "false" | "true"  (Cloud NAT bills hourly)
@@ -113,7 +114,7 @@ foundation:plan:
     TF_VAR_org_id: ${GCP_ORG_ID}
     TF_VAR_billing_account_id: ${GCP_BILLING_ID}
     TF_VAR_prefix: ${LAB_PREFIX}
-    TF_VAR_cxai_folder_id: ${CXAI_FOLDER_ID}
+    TF_VAR_gecx_folder_id: ${GECX_FOLDER_ID}
     TF_VAR_cicd_project_id: ${CICD_PROJECT_ID}
     # In CI we ARE sa-tf-foundation via WIF — no impersonation needed:
     TF_VAR_terraform_service_account: ""
@@ -128,18 +129,18 @@ foundation:apply:
     TF_VAR_org_id: ${GCP_ORG_ID}
     TF_VAR_billing_account_id: ${GCP_BILLING_ID}
     TF_VAR_prefix: ${LAB_PREFIX}
-    TF_VAR_cxai_folder_id: ${CXAI_FOLDER_ID}
+    TF_VAR_gecx_folder_id: ${GECX_FOLDER_ID}
     TF_VAR_cicd_project_id: ${CICD_PROJECT_ID}
     TF_VAR_terraform_service_account: ""
 
-# --- 2-network (sa-deploy-gecx-d) --------------------------------------------
+# --- 2-network (sa-tf-workloads) --------------------------------------------
 
 network:plan:
   stage: network
   extends: .plan
   variables:
     TF_DIR: 2-network
-    GCP_SERVICE_ACCOUNT: ${SA_DEPLOY_GECX_D}
+    GCP_SERVICE_ACCOUNT: ${SA_TF_WORKLOADS}
     TF_VAR_state_bucket: ${TF_STATE_BUCKET}
     TF_VAR_cicd_project_id: ${CICD_PROJECT_ID}
     TF_VAR_enable_nat: ${ENABLE_NAT}
@@ -152,21 +153,21 @@ network:apply:
   needs: ["network:plan", "foundation:apply"]
   variables:
     TF_DIR: 2-network
-    GCP_SERVICE_ACCOUNT: ${SA_DEPLOY_GECX_D}
+    GCP_SERVICE_ACCOUNT: ${SA_TF_WORKLOADS}
     TF_VAR_state_bucket: ${TF_STATE_BUCKET}
     TF_VAR_cicd_project_id: ${CICD_PROJECT_ID}
     TF_VAR_enable_nat: ${ENABLE_NAT}
     TF_VAR_enable_vpc_connector: ${ENABLE_CONNECTOR}
     TF_VAR_terraform_service_account: ""
 
-# --- 3-security (sa-deploy-gecx-d) -------------------------------------------
+# --- 3-security (sa-tf-workloads) -------------------------------------------
 
 security:plan:
   stage: security
   extends: .plan
   variables:
     TF_DIR: 3-security
-    GCP_SERVICE_ACCOUNT: ${SA_DEPLOY_GECX_D}
+    GCP_SERVICE_ACCOUNT: ${SA_TF_WORKLOADS}
     TF_VAR_state_bucket: ${TF_STATE_BUCKET}
     TF_VAR_cicd_project_id: ${CICD_PROJECT_ID}
     TF_VAR_prefix: ${LAB_PREFIX}
@@ -180,7 +181,7 @@ security:apply:
   needs: ["security:plan", "network:apply"]
   variables:
     TF_DIR: 3-security
-    GCP_SERVICE_ACCOUNT: ${SA_DEPLOY_GECX_D}
+    GCP_SERVICE_ACCOUNT: ${SA_TF_WORKLOADS}
     TF_VAR_state_bucket: ${TF_STATE_BUCKET}
     TF_VAR_cicd_project_id: ${CICD_PROJECT_ID}
     TF_VAR_prefix: ${LAB_PREFIX}
@@ -188,18 +189,18 @@ security:apply:
     TF_VAR_alert_email: ${ALERT_EMAIL}
     TF_VAR_terraform_service_account: ""
 
-# --- 4-workload (sa-deploy-gecx-d) -------------------------------------------
+# --- 4-workload (sa-tf-workloads) -------------------------------------------
 
 workload:plan:
   stage: workload
   extends: .plan
   variables:
     TF_DIR: 4-workload
-    GCP_SERVICE_ACCOUNT: ${SA_DEPLOY_GECX_D}
+    GCP_SERVICE_ACCOUNT: ${SA_TF_WORKLOADS}
     TF_VAR_state_bucket: ${TF_STATE_BUCKET}
     TF_VAR_cicd_project_id: ${CICD_PROJECT_ID}
     TF_VAR_prefix: ${LAB_PREFIX}
-    TF_VAR_deploy_sa_email: ${SA_DEPLOY_GECX_D}
+    TF_VAR_deploy_sa_email: ${SA_TF_WORKLOADS}
     TF_VAR_enable_ilb: ${ENABLE_ILB}
     TF_VAR_terraform_service_account: ""
 
@@ -209,10 +210,10 @@ workload:apply:
   needs: ["workload:plan", "security:apply"]
   variables:
     TF_DIR: 4-workload
-    GCP_SERVICE_ACCOUNT: ${SA_DEPLOY_GECX_D}
+    GCP_SERVICE_ACCOUNT: ${SA_TF_WORKLOADS}
     TF_VAR_state_bucket: ${TF_STATE_BUCKET}
     TF_VAR_cicd_project_id: ${CICD_PROJECT_ID}
     TF_VAR_prefix: ${LAB_PREFIX}
-    TF_VAR_deploy_sa_email: ${SA_DEPLOY_GECX_D}
+    TF_VAR_deploy_sa_email: ${SA_TF_WORKLOADS}
     TF_VAR_enable_ilb: ${ENABLE_ILB}
     TF_VAR_terraform_service_account: ""

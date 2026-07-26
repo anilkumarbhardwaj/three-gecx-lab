@@ -28,6 +28,17 @@ variable "github_repository" {
   type        = string
 }
 
+variable "gitlab_project_path" {
+  description = "GitLab project allowed to deploy via WIF, format: <namespace>/<project>, e.g. group/subgroup/three-gecx-lab"
+  type        = string
+}
+
+variable "gitlab_url" {
+  description = "GitLab instance base URL (OIDC issuer). Use https://gitlab.com for GitLab SaaS, or your self-managed instance URL."
+  type        = string
+  default     = "https://gitlab.com"
+}
+
 variable "quota_project_id" {
   description = "Optional: existing project for API quota during first apply. Leave empty on first run."
   type        = string

@@ -18,7 +18,12 @@ output "sa_tf_workloads" {
   value = google_service_account.tf_workloads.email
 }
 
-output "wif_provider" {
+output "wif_provider_github" {
   description = "Set as GitHub repo variable GCP_WIF_PROVIDER"
   value       = google_iam_workload_identity_pool_provider.github.name
+}
+
+output "wif_provider_gitlab" {
+  description = "Set as GitLab CI/CD variable GCP_WIF_PROVIDER"
+  value       = google_iam_workload_identity_pool_provider.gitlab.name
 }
